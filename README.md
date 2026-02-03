@@ -1,6 +1,6 @@
 # pystr
 
-A CLI for transforming text with Python expressions. If you know Python, you already know `pystr`. 
+A command line utility for transforming text using Python expressions. If you know Python, you already know `pystr`. 
 
 ```bash
 echo "Hello World" | pystr 's.lower().replace(" ", "-")'

@@ -1,4 +1,12 @@
-# pystr
+<p align="center">
+  <img src=".github/logo.png" alt="pystr" width="300">
+</p>
+
+<p align="center">
+  <a href="https://github.com/armandmcqueen/pystr/actions/workflows/test.yml">
+    <img src="https://github.com/armandmcqueen/pystr/actions/workflows/test.yml/badge.svg" alt="Test">
+  </a>
+</p>
 
 A command line utility for transforming text using Python expressions. If you know Python, you already know `pystr`. 
 

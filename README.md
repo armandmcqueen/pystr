@@ -19,22 +19,26 @@ cat first10primes.txt | pystr --grep "float(s) <= 5"
 2
 3
 5
+```
 
-# Combine grep and prompt to filter invalid UUIDs
+Combine grep and prompt. For example to filter invalid UUIDs
+```bash
 cat uuids.txt | pystr -g -p "invalid uuids"
 ```
 
 ## Installation
 
-Requires [uv](https://docs.astral.sh/uv/getting-started/installation/).
+pystr is a single ~250 line [Python script]((https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy it or install it from github:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install-remote.sh | bash
 ```
 
-pystr is a single ~250 line Python script with no magic - [read it here](https://github.com/armandmcqueen/pystr/blob/main/pystr).
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-For prompt mode (`-p`), set your `ANTHROPIC_API_KEY` environment variable ([get one here](https://console.anthropic.com/)).
+## LLM
+
+For prompt mode (`-p`), set your `ANTHROPIC_API_KEY` environment variable.
 
 ## Usage
 
@@ -109,7 +113,7 @@ Generated code: ' '.join(word[::-1] for word in s.split())
 olleh dlrow
 ```
 
-Uses Claude Haiku by default (`--model sonnet` or `--model opus` for smarter models).
+Uses Claude Haiku by default (`--model sonnet` or `--model opus` for smarter models). Haiku is fast, but you may need to be descriptive. Sonnet is good if you don't want to think.
 
 ### Combining flags
 

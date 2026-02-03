@@ -13,22 +13,9 @@ echo "5550123456" | pystr --prompt "format as US phone number: 000-000-0000"
 555-012-3456
 ```
 
-Grep mode
-```bash
-cat first10primes.txt | pystr --grep "float(s) <= 5"
-2
-3
-5
-```
-
-Combine grep and prompt. For example to filter invalid UUIDs
-```bash
-cat uuids.txt | pystr -g -p "invalid uuids"
-```
-
 ## Installation
 
-pystr is a single ~250 line [Python script](https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy [it](https://raw.githubusercontent.com/armandmcqueen/pystr/refs/heads/main/pystr) or install it from github:
+pystr is a single ~250 line [Python script](https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy [it](https://raw.githubusercontent.com/armandmcqueen/pystr/refs/heads/main/pystr) or download it from github:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install-remote.sh | bash

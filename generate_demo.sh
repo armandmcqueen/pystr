@@ -96,21 +96,13 @@ cat << 'EOF'
 
 EOF
 
-demo "First field" \
-    "echo 'john doe 30' | ./pystr 'f[0]'" \
-    "john doe 30"
-
-demo "Last field" \
-    "echo 'john doe 30' | ./pystr 'f[-1]'" \
-    "john doe 30"
-
-demo "Format with fields" \
-    "echo 'john doe 30 engineer' | ./pystr 'f\"{f[0]} is a {f[3]}\"'" \
-    "john doe 30 engineer"
-
 demo "CSV field" \
     "echo 'alice,bob,charlie' | ./pystr 's.split(\",\")[1]'" \
     "alice,bob,charlie"
+
+demo "First whitespace-separated word" \
+    "echo 'john doe 30' | ./pystr 's.split()[0]'" \
+    "john doe 30"
 
 cat << 'EOF'
 ## All-Input Mode (-a)

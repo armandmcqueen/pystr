@@ -14,11 +14,12 @@ Usage:
 Variables available:
     s  - current line (line mode) or entire input (with -a)
     i  - line number (0-indexed, line mode only)
-    f  - fields (s.split())
 """
 import sys
 import argparse
 import os
+import math
+import re
 
 VERSION = "0.1.2"
 
@@ -29,8 +30,59 @@ MODELS = {
 }
 
 
-def generate_code(prompt: str, is_all_mode: bool, is_grep_mode: bool, model: str) -> str:
-    """Use Claude to translate natural language to Python expression."""
+def build_prompt(task: str, input_sample: str, is_all_mode: bool, is_grep_mode: bool) -> str:
+    """Build the prompt for the LLM."""
+    # Truncate input sample to avoid huge prompts
+    max_sample = 500
+    if len(input_sample) > max_sample:
+        input_sample = input_sample[:max_sample] + "..."
+
+    # Build variables section
+    if is_all_mode:
+        variables = "- s: the entire input text (string)"
+    else:
+        variables = "- s: the current line (string)\n- i: the line number (0-indexed integer)"
+
+    # Build behavior section
+    if is_grep_mode:
+        behavior = "The expression is evaluated for each line. Lines where the expression is truthy are printed."
+    elif is_all_mode:
+        behavior = "The expression will be evaluated and its result printed automatically."
+    else:
+        behavior = "The expression is evaluated for each line and its result printed automatically."
+
+    return f"""You are generating Python code for a command-line text processing tool.
+
+IMPORTANT: Return ONLY executable Python code. Do not return the expected output - return code that produces the output. Do not use import statements - math and re modules are already available.
+
+You can write readable multi-line code with helper functions if it helps clarity. The last line must be an expression that produces the result.
+
+Example of multi-line code:
+```
+def is_valid(x):
+    pattern = r'^[0-9]+$'
+    return bool(re.match(pattern, x))
+is_valid(s)
+```
+
+Available variables and modules:
+{variables}
+- math: the math module (e.g., math.sqrt, math.floor, math.pi)
+- re: the re module for regex (e.g., re.match, re.search, re.sub, re.findall)
+- All Python builtins are available (len, int, str, list, sum, sorted, filter, map, etc.)
+
+{behavior}
+
+Sample input:
+{input_sample}
+
+Return ONLY Python code, no explanation, no markdown code fences.
+
+Task: {task}"""
+
+
+def generate_code(prompt: str, model: str) -> str:
+    """Call Claude API to generate code."""
     import anthropic
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -41,56 +93,19 @@ def generate_code(prompt: str, is_all_mode: bool, is_grep_mode: bool, model: str
 
     client = anthropic.Anthropic()
 
-    if is_grep_mode:
-        context = """You are helping generate a Python boolean expression for filtering lines in a command-line text processing tool.
-
-Available variables:
-- s: the current line (string)
-- i: the line number (0-indexed integer)
-- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly. To split into characters, use list(s).
-
-The expression is evaluated for each line. Lines where the expression is truthy are printed.
-Return ONLY the Python expression that evaluates to True/False, no explanation, no markdown, no code blocks."""
-    elif is_all_mode:
-        context = """You are helping generate a Python expression for a command-line text processing tool.
-
-Available variables:
-- s: the entire input text (string)
-- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly. To split into characters, use list(s).
-
-The expression will be evaluated and its result printed automatically.
-Return ONLY the Python expression, no explanation, no markdown, no code blocks."""
-    else:
-        context = """You are helping generate a Python expression for a command-line text processing tool.
-
-Available variables:
-- s: the current line (string)
-- i: the line number (0-indexed integer)
-- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly. To split into characters, use list(s).
-
-The expression is evaluated for each line and its result printed automatically.
-Return ONLY the Python expression, no explanation, no markdown, no code blocks."""
-
     try:
         message = client.messages.create(
             model=model,
-            max_tokens=256,
-            messages=[
-                {"role": "user", "content": f"{context}\n\nTask: {prompt}"}
-            ],
+            max_tokens=5000,
+            messages=[{"role": "user", "content": prompt}],
         )
         code = message.content[0].text.strip()
-        # Clean up common issues with model responses
         # Remove markdown code blocks if present
         if code.startswith("```"):
             lines = code.split("\n")
             # Remove first line (```python or ```) and last line (```)
             lines = [l for l in lines if not l.startswith("```")]
             code = "\n".join(lines).strip()
-        # Take only the first non-empty line (expression should be single line)
-        lines = [l.strip() for l in code.split("\n") if l.strip()]
-        if lines:
-            code = lines[0]
         return code
     except anthropic.APIError as e:
         print(f"Error calling Claude API: {e}", file=sys.stderr)
@@ -106,10 +121,9 @@ Examples:
   echo "hello world" | pystr 's.upper()'          # HELLO WORLD
   cat file.txt | pystr 's[::-1]'                  # reverse each line
   cat file.txt | pystr 'len(s)'                   # length of each line
-  cat file.txt | pystr 'f[0]'                     # first whitespace-delimited field
   cat file.txt | pystr -a 's.replace("\\n", " ")' # join all lines
   seq 5 | pystr 'int(s) ** 2'                     # square numbers
-  cat file.txt | pystr 'i, s'                     # number lines (0-indexed)
+  cat file.txt | pystr 'f"{i}: {s}"'              # number lines (0-indexed)
         """,
     )
     parser.add_argument("-v", "--version", action="version", version=f"pystr {VERSION}")
@@ -150,6 +164,11 @@ Examples:
         default="haiku",
         help="Claude model to use for code generation (use with -p, default: haiku)",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the LLM prompt without executing (use with -p)",
+    )
 
     args = parser.parse_args()
 
@@ -159,7 +178,15 @@ Examples:
     # Handle prompt mode: translate natural language to Python expression
     expression = args.expression
     if args.prompt:
-        expression = generate_code(args.expression, args.all, args.grep, MODELS[args.model])
+        llm_prompt = build_prompt(args.expression, stdin_text, args.all, args.grep)
+
+        if args.dry_run:
+            print("=== LLM Prompt ===", file=sys.stderr)
+            print(llm_prompt, file=sys.stderr)
+            print("==================", file=sys.stderr)
+            sys.exit(0)
+
+        expression = generate_code(llm_prompt, MODELS[args.model])
 
         if args.show:
             print(f"Generated code: {expression}", file=sys.stderr)
@@ -171,24 +198,46 @@ Examples:
                 print("Aborted.", file=sys.stderr)
                 sys.exit(0)
 
-    # Compile expression once
+    # Compile code - try as expression first, then as multi-line code
+    is_multiline = False
     try:
         code = compile(expression, "<expression>", "eval")
-    except SyntaxError as e:
-        if args.prompt:
-            print(f"Generated invalid code: {expression}", file=sys.stderr)
-            print(f"Syntax error: {e}", file=sys.stderr)
+    except SyntaxError:
+        # Try as multi-line code: exec all but last line, eval last line
+        lines = expression.strip().split("\n")
+        if len(lines) > 1:
+            setup_code = "\n".join(lines[:-1])
+            final_expr = lines[-1].strip()
+            try:
+                setup_compiled = compile(setup_code, "<setup>", "exec")
+                final_compiled = compile(final_expr, "<expression>", "eval")
+                code = (setup_compiled, final_compiled)
+                is_multiline = True
+            except SyntaxError as e:
+                if args.prompt:
+                    print(f"Generated invalid code:\n{expression}", file=sys.stderr)
+                    print(f"Syntax error: {e}", file=sys.stderr)
+                else:
+                    print(f"Syntax error: {e}", file=sys.stderr)
+                sys.exit(1)
         else:
-            print(f"Syntax error: {e}", file=sys.stderr)
-        sys.exit(1)
+            if args.prompt:
+                print(f"Generated invalid code: {expression}", file=sys.stderr)
+            print(f"Syntax error in expression", file=sys.stderr)
+            sys.exit(1)
 
-    def run_eval(code, context, line_info=""):
-        """Run eval with error handling."""
+    def run_code(code, context, line_info=""):
+        """Run code with error handling."""
         try:
-            return eval(code, context)
+            if is_multiline:
+                setup_compiled, final_compiled = code
+                exec(setup_compiled, context)
+                return eval(final_compiled, context)
+            else:
+                return eval(code, context)
         except Exception as e:
             if args.prompt:
-                print(f"Generated code failed: {expression}", file=sys.stderr)
+                print(f"Generated code failed:\n{expression}", file=sys.stderr)
                 print(f"{type(e).__name__}: {e}{line_info}", file=sys.stderr)
             else:
                 print(f"{type(e).__name__}: {e}{line_info}", file=sys.stderr)
@@ -197,8 +246,7 @@ Examples:
     if args.all:
         # Whole input mode
         s = stdin_text
-        f = s.split()
-        result = run_eval(code, {"s": s, "f": f, "__builtins__": __builtins__})
+        result = run_code(code, {"s": s, "math": math, "re": re, "__builtins__": __builtins__})
         if not args.no_print:
             print(result)
     else:
@@ -206,8 +254,7 @@ Examples:
         lines = stdin_text.splitlines()
         for i, line in enumerate(lines):
             s = line
-            f = s.split()
-            result = run_eval(code, {"s": s, "i": i, "f": f, "__builtins__": __builtins__}, f" (line {i})")
+            result = run_code(code, {"s": s, "i": i, "math": math, "re": re, "__builtins__": __builtins__}, f" (line {i})")
             if args.grep:
                 # Grep mode: print line if expression is truthy
                 if result:

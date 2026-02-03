@@ -56,24 +56,6 @@ class TestLineByLine:
         assert stdout == "1\n4\n9\n16\n25\n"
 
 
-class TestFields:
-    def test_first_field(self):
-        stdout, _, _ = run_pystr("f[0]", "one two three")
-        assert stdout == "one\n"
-
-    def test_last_field(self):
-        stdout, _, _ = run_pystr("f[-1]", "one two three")
-        assert stdout == "three\n"
-
-    def test_field_count(self):
-        stdout, _, _ = run_pystr("len(f)", "one two three")
-        assert stdout == "3\n"
-
-    def test_multiple_lines_fields(self):
-        stdout, _, _ = run_pystr("f[1]", "a b c\nd e f")
-        assert stdout == "b\ne\n"
-
-
 class TestAllMode:
     def test_all_mode_basic(self):
         stdout, _, _ = run_pystr("len(s)", "hello\nworld", "-a")
@@ -112,7 +94,7 @@ class TestEdgeCases:
         assert stdout == "(0, 'a')\n(1, 'b')\n"
 
     def test_list_output(self):
-        stdout, _, _ = run_pystr("f", "a b c")
+        stdout, _, _ = run_pystr("s.split()", "a b c")
         assert stdout == "['a', 'b', 'c']\n"
 
 

@@ -1,0 +1,225 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["anthropic"]
+# ///
+"""
+pystr - Python string manipulation for the command line
+
+Usage:
+    echo "hello world" | pystr 's.upper()'
+    cat file.txt | pystr 's.split()[0]'
+    cat file.txt | pystr -a 's.replace("\\n", " ")'
+
+Variables available:
+    s  - current line (line mode) or entire input (with -a)
+    i  - line number (0-indexed, line mode only)
+    f  - fields (s.split())
+"""
+import sys
+import argparse
+import os
+
+MODELS = {
+    "haiku": "claude-haiku-4-5-20251001",
+    "sonnet": "claude-sonnet-4-5-20250929",
+    "opus": "claude-opus-4-5-20251101",
+}
+
+
+def generate_code(prompt: str, is_all_mode: bool, is_grep_mode: bool, model: str) -> str:
+    """Use Claude to translate natural language to Python expression."""
+    import anthropic
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        print("Error: ANTHROPIC_API_KEY environment variable not set", file=sys.stderr)
+        print("Get your API key at https://console.anthropic.com/", file=sys.stderr)
+        sys.exit(1)
+
+    client = anthropic.Anthropic()
+
+    if is_grep_mode:
+        context = """You are helping generate a Python boolean expression for filtering lines in a command-line text processing tool.
+
+Available variables:
+- s: the current line (string)
+- i: the line number (0-indexed integer)
+- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly.
+
+The expression is evaluated for each line. Lines where the expression is truthy are printed.
+Return ONLY the Python expression that evaluates to True/False, no explanation, no markdown, no code blocks."""
+    elif is_all_mode:
+        context = """You are helping generate a Python expression for a command-line text processing tool.
+
+Available variables:
+- s: the entire input text (string)
+- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly.
+
+The expression will be evaluated and its result printed automatically.
+Return ONLY the Python expression, no explanation, no markdown, no code blocks."""
+    else:
+        context = """You are helping generate a Python expression for a command-line text processing tool.
+
+Available variables:
+- s: the current line (string)
+- i: the line number (0-indexed integer)
+- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly.
+
+The expression is evaluated for each line and its result printed automatically.
+To filter lines, return None for lines to skip (use with -q flag).
+Return ONLY the Python expression, no explanation, no markdown, no code blocks."""
+
+    try:
+        message = client.messages.create(
+            model=model,
+            max_tokens=256,
+            messages=[
+                {"role": "user", "content": f"{context}\n\nTask: {prompt}"}
+            ],
+        )
+        code = message.content[0].text.strip()
+        # Clean up common issues with model responses
+        # Remove markdown code blocks if present
+        if code.startswith("```"):
+            lines = code.split("\n")
+            # Remove first line (```python or ```) and last line (```)
+            lines = [l for l in lines if not l.startswith("```")]
+            code = "\n".join(lines).strip()
+        # Take only the first non-empty line (expression should be single line)
+        lines = [l.strip() for l in code.split("\n") if l.strip()]
+        if lines:
+            code = lines[0]
+        return code
+    except anthropic.APIError as e:
+        print(f"Error calling Claude API: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Python string manipulation for the command line",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  echo "hello world" | pystr 's.upper()'          # HELLO WORLD
+  cat file.txt | pystr 's[::-1]'                  # reverse each line
+  cat file.txt | pystr 'len(s)'                   # length of each line
+  cat file.txt | pystr 'f[0]'                     # first whitespace-delimited field
+  cat file.txt | pystr -a 's.replace("\\n", " ")' # join all lines
+  seq 5 | pystr 'int(s) ** 2'                     # square numbers
+  cat file.txt | pystr 'i, s'                     # number lines (0-indexed)
+        """,
+    )
+    parser.add_argument("expression", help="Python expression to evaluate (result is printed)")
+    parser.add_argument(
+        "-a", "--all",
+        action="store_true",
+        help="Read all input at once instead of line-by-line",
+    )
+    parser.add_argument(
+        "-n", "--no-print",
+        action="store_true",
+        help="Don't auto-print (use for expressions with side effects)",
+    )
+    parser.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        help="Suppress None results",
+    )
+    parser.add_argument(
+        "-g", "--grep",
+        action="store_true",
+        help="Grep mode: print lines where expression is truthy",
+    )
+    parser.add_argument(
+        "-p", "--prompt",
+        action="store_true",
+        help="Interpret expression as natural language prompt for Claude",
+    )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Show generated Python code before executing (use with -p)",
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Ask for confirmation before executing generated code (use with -p)",
+    )
+    parser.add_argument(
+        "--model",
+        choices=["haiku", "sonnet", "opus"],
+        default="haiku",
+        help="Claude model to use for code generation (use with -p, default: haiku)",
+    )
+
+    args = parser.parse_args()
+
+    # Read input
+    stdin_text = sys.stdin.read()
+
+    # Handle prompt mode: translate natural language to Python expression
+    expression = args.expression
+    if args.prompt:
+        expression = generate_code(args.expression, args.all, args.grep, MODELS[args.model])
+
+        if args.show:
+            print(f"Generated code: {expression}", file=sys.stderr)
+
+        if args.confirm:
+            print(f"Generated code: {expression}", file=sys.stderr)
+            response = input("Execute? [y/N] ")
+            if response.lower() not in ("y", "yes"):
+                print("Aborted.", file=sys.stderr)
+                sys.exit(0)
+
+    # Compile expression once
+    try:
+        code = compile(expression, "<expression>", "eval")
+    except SyntaxError as e:
+        if args.prompt:
+            print(f"Generated invalid code: {expression}", file=sys.stderr)
+            print(f"Syntax error: {e}", file=sys.stderr)
+        else:
+            print(f"Syntax error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    def run_eval(code, context, line_info=""):
+        """Run eval with error handling."""
+        try:
+            return eval(code, context)
+        except Exception as e:
+            if args.prompt:
+                print(f"Generated code failed: {expression}", file=sys.stderr)
+                print(f"{type(e).__name__}: {e}{line_info}", file=sys.stderr)
+            else:
+                print(f"{type(e).__name__}: {e}{line_info}", file=sys.stderr)
+            sys.exit(1)
+
+    if args.all:
+        # Whole input mode
+        s = stdin_text
+        f = s.split()
+        result = run_eval(code, {"s": s, "f": f, "__builtins__": __builtins__})
+        if not args.no_print:
+            if result is not None or not args.quiet:
+                print(result)
+    else:
+        # Line-by-line mode
+        lines = stdin_text.splitlines()
+        for i, line in enumerate(lines):
+            s = line
+            f = s.split()
+            result = run_eval(code, {"s": s, "i": i, "f": f, "__builtins__": __builtins__}, f" (line {i})")
+            if args.grep:
+                # Grep mode: print line if expression is truthy
+                if result:
+                    print(s)
+            elif not args.no_print:
+                if result is not None or not args.quiet:
+                    print(result)
+
+
+if __name__ == "__main__":
+    main()

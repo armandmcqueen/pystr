@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./pystr:*)",
+      "Bash(printf:*)",
+      "Bash(seq:*)",
+      "Bash(make test:*)",
+      "Bash(make:*)",
+      "Bash(chmod:*)",
+      "WebSearch",
+    ]
+  }
+}

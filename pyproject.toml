@@ -1,6 +1,6 @@
 [project]
 name = "pystr"
-version = "0.1.2"
+version = "1.0.0"
 description = "A CLI for transforming text with Python expressions. Or let AI write them for you."
 requires-python = ">=3.10"
 license = "Apache-2.0"

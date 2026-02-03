@@ -89,11 +89,7 @@ class TestAllMode:
 
 
 class TestFlags:
-    def test_quiet_suppresses_none(self):
-        stdout, _, _ = run_pystr("None", "hello", "-q")
-        assert stdout == ""
-
-    def test_no_quiet_prints_none(self):
+    def test_none_prints(self):
         stdout, _, _ = run_pystr("None", "hello")
         assert stdout == "None\n"
 

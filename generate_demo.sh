@@ -78,8 +78,8 @@ demo "Square numbers" \
 4
 5"
 
-demo "Filter even numbers" \
-    "seq 10 | ./pystr 'int(s) if int(s) % 2 == 0 else None' -q" \
+demo "Filter even numbers (using grep mode)" \
+    "seq 10 | ./pystr -g 'int(s) % 2 == 0'" \
     "1
 2
 3
@@ -188,7 +188,7 @@ demo "Get second field (natural language)" \
     "john,doe,30"
 
 demo "Filter even numbers (natural language)" \
-    "seq 10 | ./pystr -p -q 'only keep even numbers'" \
+    "seq 10 | ./pystr -g -p 'only keep even numbers'" \
     "1
 2
 3

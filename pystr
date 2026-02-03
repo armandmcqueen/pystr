@@ -20,6 +20,8 @@ import sys
 import argparse
 import os
 
+VERSION = "0.1.2"
+
 MODELS = {
     "haiku": "claude-haiku-4-5-20251001",
     "sonnet": "claude-sonnet-4-5-20250929",
@@ -45,7 +47,7 @@ def generate_code(prompt: str, is_all_mode: bool, is_grep_mode: bool, model: str
 Available variables:
 - s: the current line (string)
 - i: the line number (0-indexed integer)
-- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly.
+- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly. To split into characters, use list(s).
 
 The expression is evaluated for each line. Lines where the expression is truthy are printed.
 Return ONLY the Python expression that evaluates to True/False, no explanation, no markdown, no code blocks."""
@@ -54,7 +56,7 @@ Return ONLY the Python expression that evaluates to True/False, no explanation, 
 
 Available variables:
 - s: the entire input text (string)
-- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly.
+- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly. To split into characters, use list(s).
 
 The expression will be evaluated and its result printed automatically.
 Return ONLY the Python expression, no explanation, no markdown, no code blocks."""
@@ -64,10 +66,9 @@ Return ONLY the Python expression, no explanation, no markdown, no code blocks."
 Available variables:
 - s: the current line (string)
 - i: the line number (0-indexed integer)
-- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly.
+- f: whitespace-split fields (s.split()). For other delimiters like comma, use s.split(',') directly. To split into characters, use list(s).
 
 The expression is evaluated for each line and its result printed automatically.
-To filter lines, return None for lines to skip (use with -q flag).
 Return ONLY the Python expression, no explanation, no markdown, no code blocks."""
 
     try:
@@ -111,6 +112,7 @@ Examples:
   cat file.txt | pystr 'i, s'                     # number lines (0-indexed)
         """,
     )
+    parser.add_argument("-v", "--version", action="version", version=f"pystr {VERSION}")
     parser.add_argument("expression", help="Python expression to evaluate (result is printed)")
     parser.add_argument(
         "-a", "--all",
@@ -121,11 +123,6 @@ Examples:
         "-n", "--no-print",
         action="store_true",
         help="Don't auto-print (use for expressions with side effects)",
-    )
-    parser.add_argument(
-        "-q", "--quiet",
-        action="store_true",
-        help="Suppress None results",
     )
     parser.add_argument(
         "-g", "--grep",
@@ -203,8 +200,7 @@ Examples:
         f = s.split()
         result = run_eval(code, {"s": s, "f": f, "__builtins__": __builtins__})
         if not args.no_print:
-            if result is not None or not args.quiet:
-                print(result)
+            print(result)
     else:
         # Line-by-line mode
         lines = stdin_text.splitlines()
@@ -217,8 +213,7 @@ Examples:
                 if result:
                     print(s)
             elif not args.no_print:
-                if result is not None or not args.quiet:
-                    print(result)
+                print(result)
 
 
 if __name__ == "__main__":

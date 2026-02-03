@@ -28,7 +28,7 @@ cat uuids.txt | pystr -g -p "invalid uuids"
 
 ## Installation
 
-pystr is a single ~250 line [Python script]((https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy it or install it from github:
+pystr is a single ~250 line [Python script](https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy [it](https://raw.githubusercontent.com/armandmcqueen/pystr/refs/heads/main/pystr) or install it from github:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install-remote.sh | bash

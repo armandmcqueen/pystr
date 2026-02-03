@@ -1,8 +1,4 @@
-.PHONY: test demo
+.PHONY: test
 
 test:
-	uv run --with pytest pytest test_pystr.py -v
-
-demo:
-	@./generate_demo.sh > demo.md
-	@echo "Generated demo.md"
+	uv run --with pytest pytest tests/ -v

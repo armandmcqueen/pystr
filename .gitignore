@@ -1,4 +1,16 @@
+# Editor/IDE
 .idea/
+.vscode/
+
+# Python
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
+
+# Claude Code
+.claude/
+
+# Generated
 demo.md
+uv.lock

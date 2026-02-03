@@ -18,7 +18,7 @@ echo "5550123456" | pystr --prompt "format as US phone number: 000-000-0000"
 `pystr` is a single ~250 line [Python script](https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy [it](https://raw.githubusercontent.com/armandmcqueen/pystr/refs/heads/main/pystr) or download it from github:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install-remote.sh | bash
+curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install.sh | bash
 ```
 
 Requires [uv](https://docs.astral.sh/uv/getting-started/installation/).

@@ -7,7 +7,7 @@ echo "Hello World" | pystr 's.lower().replace(" ", "-")'
 hello-world
 ```
 
-Or let an LLM write the Python for you.
+Or let Claude write the Python for you.
 ```bash
 echo "5550123456" | pystr --prompt "format as US phone number: 000-000-0000"
 555-012-3456

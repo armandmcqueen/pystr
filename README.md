@@ -32,9 +32,13 @@ Requires [uv](https://docs.astral.sh/uv/getting-started/installation/).
 curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install-remote.sh | bash
 ```
 
-## How It Works
+pystr is a single ~250 line Python script with no magic - [read it here](https://github.com/armandmcqueen/pystr/blob/main/pystr).
 
-pystr reads from stdin and evaluates your Python expression for each line.
+For prompt mode (`-p`), set your `ANTHROPIC_API_KEY` environment variable ([get one here](https://console.anthropic.com/)).
+
+## Usage
+
+pystr reads from stdin and evaluates your Python expression for each line. The result is printed automatically.
 
 | Variable | Description |
 |----------|-------------|
@@ -43,21 +47,28 @@ pystr reads from stdin and evaluates your Python expression for each line.
 | `math` | The `math` module |
 | `re` | The `re` module for regex |
 
-All Python builtins (`len`, `int`, `str`, `sum`, `sorted`, etc.) are available. The result of your expression is printed automatically.
+All Python builtins (`len`, `int`, `str`, `sum`, `sorted`, etc.) are available.
 
-## Examples
+### Basic: transform each line
 
-**Reverse each line:**
 ```bash
-cat file.txt | pystr 's[::-1]'
+echo "hello world" | pystr 's.upper()'
+HELLO WORLD
+
+seq 5 | pystr 'int(s) ** 2'
+1
+4
+9
+16
+25
+
+cat file.txt | pystr 'f"{i}: {s}"'  # number lines
 ```
 
-**Number lines:**
-```bash
-cat file.txt | pystr 'f"{i}: {s}"'
-```
+### Grep mode (`-g`): filter lines
 
-**Filter lines (grep mode):**
+Print lines where the expression is truthy.
+
 ```bash
 seq 10 | pystr -g 'int(s) % 2 == 0'
 2
@@ -65,42 +76,50 @@ seq 10 | pystr -g 'int(s) % 2 == 0'
 6
 8
 10
+
+cat log.txt | pystr -g '"ERROR" in s'  # find error lines
 ```
 
-**Process entire input at once:**
+### All mode (`-a`): process entire input at once
+
+Instead of line-by-line, `s` becomes the entire input.
+
 ```bash
 cat file.txt | pystr -a 'len(s.splitlines())'  # count lines
-cat file.txt | pystr -a '",".join(s.splitlines())'  # join lines with commas
+cat file.txt | pystr -a '",".join(s.splitlines())'  # join lines
 ```
 
-## Natural Language Mode
+### Prompt mode (`-p`): let Claude write the Python
 
-Don't want to write the expression yourself? Describe what you want in plain English:
+Don't want to write the expression? Describe what you want in plain English.
 
 ```bash
-echo "5550123456" | pystr -p "format as US phone number: 000-000-0000"
+echo "5550123456" | pystr -p "format as US phone number"
 555-012-3456
 
-echo "john,doe,30" | pystr -p "get the second field, it's comma-separated"
+echo "john,doe,30" | pystr -p "get the second comma-separated field"
 doe
-
-seq 10 | pystr -g -p "even numbers"
-2
-4
-6
-8
-10
 ```
 
 Use `--show` to see the generated code:
 
 ```bash
-echo "5550123456" | pystr -p --show "format as US phone number: 000-000-0000"
-Generated code: s[:3] + '-' + s[3:6] + '-' + s[6:]
-555-012-3456
+echo "hello world" | pystr -p --show "reverse each word"
+Generated code: ' '.join(word[::-1] for word in s.split())
+olleh dlrow
 ```
 
-Requires `ANTHROPIC_API_KEY` environment variable. Uses Claude Haiku by default (`--model sonnet` or `--model opus` for alternatives). Haiku is fast but you might need to provide clearer instructions. Sonnet tends to be pretty good if you don't want to think.
+Uses Claude Haiku by default (`--model sonnet` or `--model opus` for smarter models).
+
+### Combining flags
+
+Flags can be combined. For example, grep + prompt:
+
+```bash
+cat uuids.txt | pystr -g -p "invalid uuids"
+not-a-uuid
+hello world
+```
 
 ## All Options
 

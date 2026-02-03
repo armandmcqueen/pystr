@@ -1,6 +1,6 @@
 # pystr
 
-A CLI for transforming text with Python expressions. If you know Python, you already know pystr. 
+A CLI for transforming text with Python expressions. If you know Python, you already know `pystr`. 
 
 ```bash
 echo "Hello World" | pystr 's.lower().replace(" ", "-")'
@@ -15,7 +15,7 @@ echo "5550123456" | pystr --prompt "format as US phone number: 000-000-0000"
 
 ## Installation
 
-pystr is a single ~250 line [Python script](https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy [it](https://raw.githubusercontent.com/armandmcqueen/pystr/refs/heads/main/pystr) or download it from github:
+`pystr` is a single ~250 line [Python script](https://github.com/armandmcqueen/pystr/blob/main/pystr). Copy [it](https://raw.githubusercontent.com/armandmcqueen/pystr/refs/heads/main/pystr) or download it from github:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/armandmcqueen/pystr/main/install-remote.sh | bash
@@ -29,7 +29,7 @@ For prompt mode (`-p`), set your `ANTHROPIC_API_KEY` environment variable.
 
 ## Usage
 
-pystr reads from stdin and evaluates your Python expression for each line. The result is printed automatically.
+pystr reads from stdin and runs your Python expression on line, printing the expression result.
 
 | Variable | Description |
 |----------|-------------|
@@ -38,7 +38,9 @@ pystr reads from stdin and evaluates your Python expression for each line. The r
 | `math` | The `math` module |
 | `re` | The `re` module for regex |
 
-All Python builtins (`len`, `int`, `str`, `sum`, `sorted`, etc.) are available.
+All Python builtins (`len`, `int`, `str`, `sum`, `sorted`, etc.) are available. 
+
+It's trivial to add dependencies to the script if you need - add it manually or open an issue.
 
 ### Basic: transform each line
 

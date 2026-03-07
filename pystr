@@ -117,13 +117,43 @@ def main():
         description="Python string manipulation for the command line",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  echo "hello world" | pystr 's.upper()'          # HELLO WORLD
-  cat file.txt | pystr 's[::-1]'                  # reverse each line
-  cat file.txt | pystr 'len(s)'                   # length of each line
-  cat file.txt | pystr -a 's.replace("\\n", " ")' # join all lines
-  seq 5 | pystr 'int(s) ** 2'                     # square numbers
-  cat file.txt | pystr 'f"{i}: {s}"'              # number lines (0-indexed)
+MODES:
+  Line mode (default)  Evaluate expression per line. One output line per input line.
+  All mode (-a)        s = entire stdin. Single evaluation, single output.
+  Grep mode (-g)       Evaluate per line. Print original line when expression is truthy.
+  Prompt mode (-p)     Expression is natural language. Claude generates Python code.
+
+AVAILABLE VARIABLES:
+  s      Current line (line mode) or entire input (-a mode). Always a string.
+  i      0-indexed line number (line mode only, not available in -a mode).
+  math   The math module (math.sqrt, math.floor, math.pi, etc.)
+  re     The re module (re.match, re.search, re.sub, re.findall, etc.)
+  All Python builtins are available (len, int, str, list, sum, sorted, etc.)
+
+OUTPUT FORMAT:
+  Line mode:  One line per input line. Each line is str(result) of the expression.
+  All mode:   Single print of str(result).
+  Grep mode:  Original input lines (unchanged) where expression was truthy.
+  Errors go to stderr. Exit code 1 on error, 0 on success.
+
+EXAMPLES WITH OUTPUT:
+  $ echo "hello world" | pystr 's.upper()'
+  HELLO WORLD
+
+  $ printf "alice\\nbob\\ncharlie" | pystr 'f"{i}: {s}"'
+  0: alice
+  1: bob
+  2: charlie
+
+  $ seq 5 | pystr -g 'int(s) % 2 == 0'
+  2
+  4
+
+  $ printf "line1\\nline2\\nline3" | pystr -a 'len(s.splitlines())'
+  3
+
+  $ echo "john,doe,30" | pystr -p "get the second comma-separated field"
+  doe
         """,
     )
     parser.add_argument("-v", "--version", action="version", version=f"pystr {VERSION}")

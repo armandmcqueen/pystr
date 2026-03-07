@@ -117,11 +117,12 @@ def main():
         description="Python string manipulation for the command line",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-MODES:
-  Line mode (default)  Evaluate expression per line. One output line per input line.
-  All mode (-a)        s = entire stdin. Single evaluation, single output.
-  Grep mode (-g)       Evaluate per line. Print original line when expression is truthy.
-  Prompt mode (-p)     Expression is natural language. Claude generates Python code.
+BEHAVIOR FLAGS (can be combined):
+  (default)   Evaluate expression per line. One output line per input line.
+  -a, --all   s = entire stdin instead of current line. Single evaluation, single output.
+  -g, --grep  Print original line when expression is truthy (instead of printing result).
+  -p, --prompt  Expression is natural language. Claude generates the Python code.
+  -n, --no-print  Suppress auto-print (for side-effect expressions).
 
 AVAILABLE VARIABLES:
   s      Current line (line mode) or entire input (-a mode). Always a string.
